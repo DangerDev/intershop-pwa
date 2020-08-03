@@ -3,6 +3,8 @@ import { NgModule } from '@angular/core';
 import { environment } from '../../environments/environment';
 
 import * as injectionKeys from './configurations/injection-keys';
+import { SPECIAL_HTTP_ERROR_HANDLER } from './interceptors/icm-error-mapper.interceptor';
+import { updatePasswordErrorHandler } from './utils/http-error/update-password-error-handler';
 
 @NgModule({
   providers: [
@@ -21,6 +23,7 @@ import * as injectionKeys from './configurations/injection-keys';
     { provide: injectionKeys.LARGE_BREAKPOINT_WIDTH, useValue: environment.largeBreakpointWidth },
     { provide: injectionKeys.EXTRALARGE_BREAKPOINT_WIDTH, useValue: environment.extralargeBreakpointWidth },
     { provide: injectionKeys.THEME, useValue: environment.theme },
+    { provide: SPECIAL_HTTP_ERROR_HANDLER, useValue: updatePasswordErrorHandler, multi: true },
   ],
 })
 export class ConfigurationModule {}

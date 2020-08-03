@@ -1,35 +1,81 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import { BasketInfo } from 'ish-core/models/basket-info/basket-info.model';
-
 import { HttpError } from './http-error.model';
 
-export class HttpErrorMapper {
-  // tslint:disable-next-line:ban-types
-  static fromError(error: HttpErrorResponse): HttpError {
-    const headers = !error.headers
-      ? undefined
-      : error.headers.keys().reduce((acc, val) => ({ ...acc, [val]: error.headers.get(val) }), {});
+// tslint:disable:ban-types
 
-    return {
-      name: error.name,
-      message: error.message,
-      errorCode: error?.error?.errors?.[0]?.code,
-      error:
-        typeof error.error === 'string'
-          ? error.error
-          : HttpErrorMapper.determineErrorMessage(error?.error?.errors?.[0]),
-      status: error.status,
-      statusText: error.statusText,
-      headers,
-    };
-  }
+interface SpecialCallHandler {
+  test(error: HttpErrorResponse): boolean;
+  map(error: HttpErrorResponse): Partial<HttpError>;
+}
 
-  private static determineErrorMessage(error: BasketInfo): string {
-    let message = error && error.message;
-    if (message && error.causes) {
-      message += error.causes.map(cause => (cause.message ? ' ' + cause.message : ''));
+const updatePasswordMapper: SpecialCallHandler = {
+  test: error => error.url?.endsWith('/security/password'),
+  map: error => {
+    switch (error.headers['error-missing-attributes'] || error.headers['error-invalid-attributes']) {
+      case 'secureCode':
+        return { code: 'account.forgotdata.consumer_invalid_hash.error' };
+      case 'userID':
+        return { code: 'account.forgotdata.consumer_disabled.error' };
+      case 'password':
+        return { code: 'customer.credentials.passwordreset.invalid_password.error.PasswordExpressionViolation' };
+      default:
+        return { code: 'account.forgotdata.consumer_password_timeout.error' };
     }
-    return message || undefined; // undefined is needed to avoid null
+  },
+};
+
+export class HttpErrorMapper {
+  static fromError(httpError: HttpErrorResponse): HttpError {
+    if (updatePasswordMapper.test(httpError)) {
+      return { name: 'HttpErrorResponse', status: httpError.status, ...updatePasswordMapper.map(httpError) };
+    }
+    if (httpError.headers?.get('error-key')) {
+      return {
+        name: 'HttpErrorResponse',
+        status: httpError.status,
+        code: httpError.headers.get('error-key'),
+      };
+    }
+    if (typeof httpError.error === 'string') {
+      return {
+        name: 'HttpErrorResponse',
+        status: httpError.status,
+        message: httpError.error,
+      };
+    }
+
+    if (typeof httpError.error === 'object') {
+      const errors: {
+        code: string;
+        message: string;
+        causes?: {
+          code: string;
+          message: string;
+          paths: string[];
+        }[];
+      }[] = httpError.error.errors;
+      if (errors?.length) {
+        if (errors.length > 1) {
+          console.warn('ignoring errors' + JSON.stringify(errors.slice(1)));
+        }
+        const error = errors[0];
+        if (error.causes?.length) {
+          return {
+            name: 'HttpErrorResponse',
+            message: [error.message].concat(...error.causes.map(c => c.message)).join(' '),
+            status: httpError.status,
+          };
+        }
+        return {
+          name: 'HttpErrorResponse',
+          message: error.message,
+          status: httpError.status,
+        };
+      }
+    }
+
+    console.warn('could not map', httpError);
+    return httpError;
   }
 }

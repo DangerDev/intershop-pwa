@@ -3,68 +3,113 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { HttpErrorMapper } from './http-error.mapper';
 
 describe('Http Error Mapper', () => {
-  it('should convert correctly for simple HttpErrorResponse', () => {
-    expect(HttpErrorMapper.fromError(new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' })))
+  it('should convert text responses to simplified format', () => {
+    expect(HttpErrorMapper.fromError(new HttpErrorResponse({ status: 401, error: 'Unauthorized' })))
       .toMatchInlineSnapshot(`
       Object {
-        "error": undefined,
-        "errorCode": undefined,
-        "headers": Object {},
-        "message": "Http failure response for (unknown url): 401 Unauthorized",
+        "message": "Unauthorized",
         "name": "HttpErrorResponse",
         "status": 401,
-        "statusText": "Unauthorized",
-      }
-    `);
-  });
-  it('should convert correctly for HttpErrorResponse with headers', () => {
-    expect(
-      HttpErrorMapper.fromError(
-        new HttpErrorResponse({
-          status: 500,
-          headers: new HttpHeaders().set('key1', 'value1').set('key2', 'value2'),
-        })
-      )
-    ).toMatchInlineSnapshot(`
-      Object {
-        "error": undefined,
-        "errorCode": undefined,
-        "headers": Object {
-          "key1": "value1",
-          "key2": "value2",
-        },
-        "message": "Http failure response for (unknown url): 500 undefined",
-        "name": "HttpErrorResponse",
-        "status": 500,
-        "statusText": "Unknown Error",
       }
     `);
   });
 
-  it('should convert correctly for simple HttpErrorResponse with error Message', () => {
-    expect(
-      HttpErrorMapper.fromError(
-        new HttpErrorResponse({ status: 401, statusText: 'Unauthorized', error: 'Error Message' })
-      )
-    ).toMatchSnapshot();
-  });
-
-  it('should convert correctly for HttpErrorResponse with errors and causes', () => {
+  it('should convert ICM errors format with cause to simplified format concatenating all causes', () => {
     expect(
       HttpErrorMapper.fromError(
         new HttpErrorResponse({
           status: 422,
-          statusText: 'Unprocessable Entity',
           error: {
             errors: [
               {
-                message: 'The product could not be added to your cart.',
-                causes: [{ message: 'The maximum allowed item quantity is exceeded' }],
+                causes: [
+                  {
+                    code: 'basket.promotion_code.add_code_promotion_code_not_found.error',
+                    message: 'The promotion code could not be found.',
+                    paths: ['$.code'],
+                  },
+                  {
+                    code: 'some.other.error',
+                    message: 'Some other error.',
+                    paths: ['$.code'],
+                  },
+                ],
+                code: 'basket.promotion_code.add_not_successful.error',
+                message: 'The promotion code could not be added.',
+                status: '422',
               },
             ],
           },
         })
       )
-    ).toMatchSnapshot();
+    ).toMatchInlineSnapshot(`
+      Object {
+        "message": "The promotion code could not be added. The promotion code could not be found. Some other error.",
+        "name": "HttpErrorResponse",
+        "status": 422,
+      }
+    `);
+  });
+
+  it('should convert ICM errors format to simplified format', () => {
+    expect(
+      HttpErrorMapper.fromError(
+        new HttpErrorResponse({
+          status: 422,
+          error: {
+            errors: [
+              {
+                code: 'basket.add_line_item_not_successful.error',
+                message: 'The product could not be added to your cart.',
+                paths: ['$[0]'],
+                status: '422',
+              },
+            ],
+          },
+        })
+      )
+    ).toMatchInlineSnapshot(`
+      Object {
+        "message": "The product could not be added to your cart.",
+        "name": "HttpErrorResponse",
+        "status": 422,
+      }
+    `);
+  });
+
+  it('should convert error-key header responses to simplified format', () => {
+    expect(
+      HttpErrorMapper.fromError(
+        new HttpErrorResponse({
+          status: 409,
+          error: 'Conflict (Login name is not unique (it already exists))',
+          headers: new HttpHeaders().set('error-key', 'customer.credentials.login.not_unique.error'),
+        })
+      )
+    ).toMatchInlineSnapshot(`
+      Object {
+        "code": "customer.credentials.login.not_unique.error",
+        "name": "HttpErrorResponse",
+        "status": 409,
+      }
+    `);
+  });
+
+  it('should map special update password errors to matching codes', () => {
+    expect(
+      HttpErrorMapper.fromError(
+        new HttpErrorResponse({
+          status: 400,
+          url: 'http://example.com/security/password',
+          headers: new HttpHeaders().set('error-missing-key', 'password'),
+        })
+      )
+    ).toMatchInlineSnapshot(`
+      Object {
+        "code": "account.forgotdata.consumer_password_timeout.error",
+        "name": "HttpErrorResponse",
+        "status": 400,
+      }
+    `);
   });
 });

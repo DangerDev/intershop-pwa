@@ -1,12 +1,4 @@
-import {
-  HttpErrorResponse,
-  HttpEvent,
-  HttpHandler,
-  HttpHeaders,
-  HttpInterceptor,
-  HttpRequest,
-  HttpResponse,
-} from '@angular/common/http';
+import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Store, select } from '@ngrx/store';
 import { Observable, of, throwError } from 'rxjs';
@@ -52,13 +44,11 @@ export class MockInterceptor implements HttpInterceptor {
       mergeMap(event => {
         if (event instanceof HttpResponse) {
           if (this.isLoginAttempt(req) && !this.isMockUserLoggingInSuccessfully(req)) {
-            return throwError(
-              new HttpErrorResponse({
-                status: 401,
-                error: 'wrong credentials',
-                headers: new HttpHeaders({ 'error-key': 'account.login.email_password.error.invalid' }),
-              })
-            );
+            return throwError({
+              status: 401,
+              name: 'HttpErrorResponse',
+              code: 'account.login.email_password.error.invalid',
+            });
           }
           return of(this.attachTokenIfNecessary(req, event));
         }

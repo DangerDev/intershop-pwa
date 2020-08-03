@@ -132,10 +132,13 @@ describe('Mock Interceptor', () => {
       mockInterceptor
         .intercept(request.clone({ headers: request.headers.append('Authorization', 'invalid') }), handler)
         .subscribe(fail, event => {
-          expect(event.ok).toBeFalsy();
-          expect(event.status).toBe(401);
-          expect(event.headers.get('authentication-token')).toBeFalsy();
-          expect(event.headers.get('error-key')).toBeTruthy();
+          expect(event).toMatchInlineSnapshot(`
+            Object {
+              "code": "account.login.email_password.error.invalid",
+              "name": "HttpErrorResponse",
+              "status": 401,
+            }
+          `);
           done();
         });
     });

@@ -43,6 +43,25 @@ describe('Icm Error Mapper Interceptor', () => {
     httpController.expectOne('some').flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
   });
 
+  it('should convert empty responses to simplified format', done => {
+    http.get('some').subscribe(fail, error => {
+      expect(error).toMatchInlineSnapshot(`
+        Object {
+          "message": "Http failure response for some: 400 Bad Request",
+          "name": "HttpErrorResponse",
+          "status": 400,
+        }
+      `);
+      done();
+    });
+
+    httpController.expectOne('some').flush(
+      // tslint:disable-next-line: no-null-keyword
+      null,
+      { status: 400, statusText: 'Bad Request' }
+    );
+  });
+
   it('should convert ICM errors format with cause to simplified format concatenating all causes', done => {
     http.get('some').subscribe(fail, error => {
       expect(error).toMatchInlineSnapshot(`

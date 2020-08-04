@@ -37,9 +37,9 @@ import { ModuleLoaderService } from './utils/module-loader/module-loader.service
     StateManagementModule,
   ],
   providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: ICMErrorMapperInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: MockInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: ICMErrorMapperInterceptor, multi: true },
     { provide: ErrorHandler, useClass: DefaultErrorhandler },
   ],
   // exports needed to use the cookie banner in the AppComponent

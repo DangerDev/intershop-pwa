@@ -1,5 +1,6 @@
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable, InjectionToken, Injector } from '@angular/core';
+import { pick } from 'lodash-es';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -50,7 +51,7 @@ export class ICMErrorMapperInterceptor implements HttpInterceptor {
           message: string;
           paths: string[];
         }[];
-      }[] = httpError.error.errors;
+      }[] = httpError.error?.errors;
       if (errors?.length) {
         if (errors.length > 1) {
           console.warn('ignoring errors' + JSON.stringify(errors.slice(1)));
@@ -71,8 +72,7 @@ export class ICMErrorMapperInterceptor implements HttpInterceptor {
       }
     }
 
-    console.warn('could not map', httpError);
-    return httpError;
+    return pick(httpError, 'status', 'name', 'message');
   }
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
